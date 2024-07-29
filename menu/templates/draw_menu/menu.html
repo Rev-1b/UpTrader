@@ -1,11 +1,14 @@
 <ul>
+    {# Получаем список из всех дочерних элементов пункта меню "curr", на один уровень вложенности вглубь#}
     {% for item in menu|get_item:curr %}
+        {# Если "item" является ключом в "menu", значит, он ведет к выбранному пункту меню и его надо отобразить#}
         {% if item in menu %}
             <li>
                 <span>* {{ item.name }}</span>
                 {% include 'draw_menu/menu.html' with curr=item %}
             </li>
         {% else %}
+            {# Иначе необходимо дать возможность пользователю выбрать этот пункт меню, то есть добавить ссылку#}
             <li>
                 <a href="{% url 'menu_item' menu_slug=menu_slug item_slug=item.slug %}">{{ item.name }}</a>
             </li>

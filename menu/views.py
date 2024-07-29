@@ -8,7 +8,7 @@ class MainPageView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['head_menu'] = HeadMenuModel.objects.all()
-        context['params'] = self.kwargs
+        # context['params'] = self.kwargs
         return context
 
 

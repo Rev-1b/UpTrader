@@ -12,7 +12,7 @@
 {% for menu_obj in head_menu %}
     <li class="nav-item">
         <a href="{{ menu_obj.get_absolute_url }}">{{ menu_obj.name }}</a>
-        {% if params.menu_slug == menu_obj.slug %}
+        {% if menu_slug == menu_obj.slug %}
             {% draw_menu menu_obj.name %}
         {% endif %}
     </li>

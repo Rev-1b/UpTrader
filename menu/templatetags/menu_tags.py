@@ -1,6 +1,10 @@
 from django import template
 from collections import defaultdict
 
+from django.db.models import QuerySet
+from django.http import Http404
+from django.template import exceptions
+
 from menu.models import MenuItemModel
 
 register = template.Library()
@@ -8,49 +12,54 @@ register = template.Library()
 
 @register.inclusion_tag('draw_menu/menu.html', takes_context=True)
 def draw_menu(context, menu_name):
-    '''
-    Неоптимальное решение! Для избегания проблемы n+1 при построении маршрута до верхнего элемента меню было принято
-    решение переводить QuerySet в список, что избавляет от проблемы с множественными запросами, но создает новую -
-    хранение в памяти лишних данных. Я уверен, что есть способ избежать этих двух проблем, но я за ограниченное время
-    его найти не смог.
-    '''
-    item_slug = context.get('params', {}).get('item_slug', None)
-    menu_slug = context.get('params', {}).get('menu_slug', None)
+    item_slug = context.get('item_slug', None)
+    menu_slug = context.get('menu_slug', None)
 
-    menu_items = list(MenuItemModel.objects.filter(
-        head_menu__name=menu_name).select_related('parent'))
+    # Получаем все разделы меню, принадлежащие выбранному меню. Если выбранный пункт не является верхним,
+    # все вышестоящие пункты будут включены в запрос
+    menu_queryset = MenuItemModel.objects.filter(
+        head_menu__name=menu_name).select_related('parent')
 
-    parent_item_dict = defaultdict(list)
-    item_parent_dict = {}
+    parent_to_item_dict = defaultdict(list)
+    item_to_parent_dict = {}
 
-    for item in menu_items:
-        parent_item_dict[str(item.parent)].append(item)
-        item_parent_dict[str(item)] = item.parent
+    for item in menu_queryset:
+        # Словарь, который содержит все дочерние элементы на 1 уровень ниже для каждого пункта меню
+        parent_to_item_dict[str(item.parent)].append(item)
 
-    if item_slug:
-        item = _find_item(menu_items, item_slug)
-        menu_temp = _create_menu_dict(parent_item_dict, item_parent_dict, item)
-    else:
-        menu_temp = {}
-    menu_temp['main'] = parent_item_dict['None']
+        # Словарь, который содержит пару 'пункт меню': 'его родительский элемент'. Нужен просто для оптимизации
+        item_to_parent_dict[str(item)] = item.parent
 
-    return {'menu': menu_temp, 'curr': 'main', 'menu_slug': menu_slug}
+    if item_slug:  # Если был выбран любой пункт меню, кроме корневых
+        item = _find_item(menu_queryset, item_slug)
+        resulted_menu = _create_menu_dict(parent_to_item_dict, item_to_parent_dict, item)
+    else:  # Если выбран корневой пункт меню (объект HeadMenuModel)
+        resulted_menu = {}
+
+    # None будет иметь только самый высокоуровневый элемент, с которого и начнется отрисовка меню
+    resulted_menu['main'] = parent_to_item_dict['None']
+
+    return {'menu': resulted_menu, 'curr': 'main', 'menu_slug': menu_slug}
 
 
-def _create_menu_dict(parent_item: dict[str, list[MenuItemModel]],
-                      item_parent: dict[str, MenuItemModel],
+def _create_menu_dict(parent_to_item: dict[str, list[MenuItemModel]],
+                      item_to_parent: dict[str, MenuItemModel],
                       item: MenuItemModel) -> dict[MenuItemModel, list[MenuItemModel]]:
     menu = {}
     while item:
-        item_children = parent_item[str(item)]
+        # Для отображаемого первого уровня вложенности для текущего элемента меню
+        item_children = parent_to_item[str(item)]
         menu[item] = item_children
 
-        item = item_parent[str(item)]
+        # Приходится прибегать к такому костылю, так как item = item.parent вызовет n+1 для каждого уровня вложенности
+        item = item_to_parent[str(item)]
 
     return menu
 
 
-def _find_item(lst: list[MenuItemModel], item_slug: str) -> MenuItemModel:
-    for item in lst:
+def _find_item(queryset: QuerySet[MenuItemModel], item_slug: str) -> MenuItemModel:
+    # итерируемся по menu_queryset как по обычному списку, чтобы не создавать дополнительный запрос
+    for item in queryset:
         if item.slug == item_slug:
             return item
+    raise Http404(f'"{item_slug}" is not a valid menu item')
