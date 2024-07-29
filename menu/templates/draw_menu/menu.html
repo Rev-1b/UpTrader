@@ -10,6 +10,7 @@
         {% else %}
             {# Иначе необходимо дать возможность пользователю выбрать этот пункт меню, то есть добавить ссылку#}
             <li>
+                {# Не пользуемся get_absolute_url, чтобы лишний раз не обращаться в бд#}
                 <a href="{% url 'menu_item' menu_slug=menu_slug item_slug=item.slug %}">{{ item.name }}</a>
             </li>
         {% endif %}

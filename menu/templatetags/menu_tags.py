@@ -1,9 +1,8 @@
-from django import template
 from collections import defaultdict
 
+from django import template
 from django.db.models import QuerySet
 from django.http import Http404
-from django.template import exceptions
 
 from menu.models import MenuItemModel
 
@@ -27,7 +26,7 @@ def draw_menu(context, menu_name):
         # Словарь, который содержит все дочерние элементы на 1 уровень ниже для каждого пункта меню
         parent_to_item_dict[str(item.parent)].append(item)
 
-        # Словарь, который содержит пару 'пункт меню': 'его родительский элемент'. Нужен просто для оптимизации
+        # Словарь, который содержит пару 'пункт меню': 'его родительский элемент'. Нужен для оптимизации
         item_to_parent_dict[str(item)] = item.parent
 
     if item_slug:  # Если был выбран любой пункт меню, кроме корневых
