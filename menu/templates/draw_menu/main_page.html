@@ -1,0 +1,24 @@
+{% load menu_tags %}
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Главная страница</title>
+    <link href="{% static 'css/bootstrap.css' %}" rel="stylesheet">
+</head>
+<body>
+{% for menu_obj in head_menu %}
+    <li class="nav-item">
+        <a href="{{ menu_obj.get_absolute_url }}">{{ menu_obj.name }}</a>
+        {% if params.menu_slug == menu_obj.slug %}
+            {% draw_menu menu_obj.name %}
+        {% endif %}
+    </li>
+{% endfor %}
+
+</body>
+
+<script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+</html>
